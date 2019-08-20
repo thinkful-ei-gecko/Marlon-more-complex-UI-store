@@ -2,15 +2,32 @@
 
 const STORE = {
   items: [
-    {id: cuid(), name: "apples", checked: false},
-    {id: cuid(), name: "oranges", checked: false},
-    {id: cuid(), name: "milk", checked: true},
-    {id: cuid(), name: "bread", checked: false}
+    {id: cuid(), name: "apples", checked: false, isEditing: false},
+    {id: cuid(), name: "oranges", checked: false, isEditing: false},
+    {id: cuid(), name: "milk", checked: true, isEditing: false},
+    {id: cuid(), name: "bread", checked: false, isEditing: false}
   ],
-  hideCompleted: false
+  hideCompleted: false,
+  searchItem: null,
 };
 
 function generateItemElement(item) {
+  let itemMainTitle;
+  if (item.isEditing) {
+    itemMainTitle = `
+        <form id="edit-item-name-form">
+          <input type="text" name="edit-name" class="js-edit-item-name" value="${item.name}" />
+        </form>
+      `;
+  } else {
+    itemMainTitle = `
+        <span class="shopping-item js-shopping-item ${item.checked ? "shopping-item__checked" : ''}">
+          ${item.name}
+        </span>`;
+  }
+  
+  const disabledStatus = item.isEditing ? 'disabled' : '';
+
   return `
     <li data-item-id="${item.id}">
       <span class="shopping-item js-shopping-item ${item.checked ? "shopping-item__checked" : ''}">${item.name}</span>
@@ -20,6 +37,9 @@ function generateItemElement(item) {
         </button>
         <button class="shopping-item-delete js-item-delete">
             <span class="button-label">delete</span>
+        </button>
+        <button class="shopping-item-edit js-item-edit">
+            <span class="button-label">edit</span>
         </button>
       </div>
     </li>`;
@@ -47,6 +67,12 @@ function renderShoppingList() {
   // where ONLY items with a "checked" property of false are included
   if (STORE.hideCompleted) {
     filteredItems = filteredItems.filter(item => !item.checked);
+  }
+
+  $('js-search-shopping-item').val(STORE.searchItem);
+
+  if (STORE.searchItem){
+    filteredItems = filteredItems.filter(item => item.name.includes(STORE.searchItem));
   }
 
   // at this point, all filtering work has been done (or not done, if that's the current settings), so
@@ -88,7 +114,7 @@ function getItemIdFromElement(item) {
 }
 
 function handleItemCheckClicked() {
-  $('.js-shopping-list').on('click', `.js-item-toggle`, event => {
+  $('js-shopping-list').on('click', `.js-item-toggle`, event => {
     console.log('`handleItemCheckClicked` ran');
     const id = getItemIdFromElement(event.currentTarget);
     toggleCheckedForListItem(id);
@@ -137,8 +163,58 @@ function handleToggleHideFilter() {
   });
 }
 
-//What properties to add to the store to be a data representation 
-//of the change in view
+function searchShoppingItems(searchItem){
+  STORE.searchItem = searchItem;
+}
+
+function handleSearchShoppingItems(){
+  $('#js-shopping-items-searchbar-form').on('submit', event => {
+    event.preventDefault();
+    const searchItem = $('.js-search-shopping-items').val();
+    console.log(searchItem);
+    searchShoppingItems(searchItem);
+    renderShoppingList();
+  });
+}
+
+function handleClearSearchShoppingItems(){
+  $('#searchbar-clear-button').on('click', event => {
+    searchShoppingItems('');
+    $('.js-search-shopping-items').val('');
+    renderShoppingList();
+  });
+}
+
+function setItemIsEditing(itemId, isEditing) {
+  const targetItem = STORE.items.find(item => item.id === itemId);
+  targetItem.isEditing = isEditing;
+}
+
+function handleSetItemIsEditing(){
+  $('.js-shopping-list').on('click', '.js-shopping-item', event =>
+  {
+    const id = getItemIdFromElement(event.target);
+    setItemIsEditing(id, true);
+    renderShoppingList();
+  });
+}
+function editShoppingItem(itemId, newName){
+  const currentItem = STORE.items.find(item => item.id === itemID);
+  currentItem.name = newName; 
+}
+
+function handleEditShoppingItem(){
+  $('.js-shopping-list').on('submit','#edit-item-name-form', event => {
+    event.preventDefault();
+    const id = getItemIdFromElement(event.target);
+    const newName = $('.js-edit-item-name').val()
+    editShoppingItem(id, newName);
+    renderShoppingList();
+  });
+}
+
+
+
 
 
 
@@ -153,6 +229,10 @@ function handleShoppingList() {
   handleItemCheckClicked();
   handleDeleteItemClicked();
   handleToggleHideFilter();
+  handleSearchShoppingItems();
+  handleEditShoppingItem();
+  handleSetItemIsEditing();
+  handleClearSearchShoppingItems();
 }
 
 // when the page loads, call `handleShoppingList`
